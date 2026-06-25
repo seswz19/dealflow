@@ -14,57 +14,101 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
   :root{--bg:#0f1115;--panel:#181b22;--panel2:#1f232c;--line:#2a2f3a;--txt:#e8eaee;
-    --mut:#9aa3b2;--acc:#4f9cf9;--good:#33c27f;--warn:#f5b942;--bad:#ef5d5d;--chip:#262b35;--shadow:rgba(0,0,0,.5)}
+    --mut:#9aa3b2;--acc:#4f9cf9;--good:#33c27f;--warn:#f5b942;--bad:#ef5d5d;--chip:#262b35;--shadow:rgba(0,0,0,.5);
+    --glass:rgba(20,23,30,.78)}
   [data-theme="light"]{--bg:#f4f6fa;--panel:#fff;--panel2:#eef1f6;--line:#dde2ea;--txt:#15181e;
-    --mut:#5d6675;--acc:#1f6feb;--chip:#eef1f6;--shadow:rgba(20,30,50,.12)}
+    --mut:#5d6675;--acc:#1f6feb;--chip:#eef1f6;--shadow:rgba(20,30,50,.12);--glass:rgba(255,255,255,.82)}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-  body{margin:0;font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--txt)}
-  header{position:sticky;top:0;z-index:600;background:var(--bg);border-bottom:1px solid var(--line);
-    padding:calc(env(safe-area-inset-top) + 12px) 16px 10px}
-  .row{display:flex;align-items:center;justify-content:space-between;gap:8px}
-  h1{margin:0;font-size:17px;font-weight:650}
-  .sub{color:var(--mut);font-size:12px;margin-top:2px}
-  .icbtn{background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:9px;
-    width:34px;height:34px;font-size:15px;cursor:pointer}
-  .stats{display:flex;gap:8px;overflow-x:auto;padding:10px 0 2px;scrollbar-width:none}
-  .stats::-webkit-scrollbar{display:none}
-  .stat{flex:0 0 auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 12px;min-width:70px}
-  .stat b{display:block;font-size:18px;font-weight:680}.stat span{color:var(--mut);font-size:11px}
-  .controls{display:flex;gap:8px;flex-wrap:wrap;padding:10px 16px 0}
+  html,body{height:100%}
+  body{margin:0;font:15px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:var(--bg);color:var(--txt);overflow:hidden}
+
+  /* ---- full-screen map ---- */
+  #map{position:fixed;inset:0;z-index:0}
+
+  /* ---- condensed floating dashboard ---- */
+  .hud{position:fixed;top:calc(env(safe-area-inset-top) + 10px);left:50%;transform:translateX(-50%);
+    z-index:600;display:flex;align-items:center;gap:10px;max-width:calc(100vw - 24px);
+    background:var(--glass);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+    border:1px solid var(--line);border-radius:14px;padding:7px 10px;box-shadow:0 6px 24px var(--shadow)}
+  .hud .brand{display:flex;flex-direction:column;line-height:1.1;padding:0 4px 0 2px}
+  .hud .brand b{font-size:14px;font-weight:680;white-space:nowrap}
+  .hud .brand span{color:var(--mut);font-size:10px;white-space:nowrap}
+  .hstats{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+  .hstats::-webkit-scrollbar{display:none}
+  .hstat{flex:0 0 auto;text-align:center;padding:2px 9px;border-left:1px solid var(--line)}
+  .hstat b{display:block;font-size:15px;font-weight:700;line-height:1}
+  .hstat span{color:var(--mut);font-size:9.5px;text-transform:uppercase;letter-spacing:.3px}
+
+  /* ---- floating action buttons (top-right) ---- */
+  .fabs{position:fixed;top:calc(env(safe-area-inset-top) + 10px);right:12px;z-index:600;
+    display:flex;flex-direction:column;gap:8px}
+  .fab{width:42px;height:42px;border-radius:12px;border:1px solid var(--line);background:var(--glass);
+    -webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:var(--txt);font-size:18px;cursor:pointer;
+    box-shadow:0 4px 16px var(--shadow);display:flex;align-items:center;justify-content:center;position:relative}
+  .fab.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+  .fab .badge{position:absolute;top:-5px;right:-5px;background:var(--good);color:#04130b;font-size:10px;
+    font-weight:700;border-radius:999px;min-width:17px;height:17px;padding:0 4px;display:flex;align-items:center;justify-content:center}
+
+  /* ---- slide-in list panel ---- */
+  .panel{position:fixed;top:0;right:0;bottom:0;width:390px;max-width:90vw;z-index:900;
+    background:var(--bg);border-left:1px solid var(--line);box-shadow:-8px 0 30px var(--shadow);
+    transform:translateX(100%);transition:transform .26s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column}
+  .panel.on{transform:translateX(0)}
+  .phead{padding:calc(env(safe-area-inset-top) + 12px) 14px 10px;border-bottom:1px solid var(--line);background:var(--bg)}
+  .phead .row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .phead h2{margin:0;font-size:16px;font-weight:680}
+  .x{background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:9px;width:32px;height:32px;font-size:16px;cursor:pointer}
+  .controls{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
   .controls select,.controls input{background:var(--panel2);color:var(--txt);border:1px solid var(--line);
-    border-radius:10px;padding:8px 10px;font-size:13px}
+    border-radius:9px;padding:7px 9px;font-size:12.5px}
   .controls input{flex:1;min-width:120px}
-  .seg{display:flex;background:var(--panel2);border:1px solid var(--line);border-radius:10px;overflow:hidden}
-  .seg button{background:none;border:none;color:var(--mut);padding:8px 11px;font-size:13px;cursor:pointer}
+  .seg{display:flex;width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .seg button{flex:1;background:none;border:none;color:var(--mut);padding:7px 4px;font-size:12.5px;cursor:pointer}
   .seg button.on{background:var(--acc);color:#fff}
-  #map{height:40vh;min-height:240px;margin:12px 16px 0;border-radius:14px;border:1px solid var(--line)}
-  .count{color:var(--mut);font-size:12px;padding:10px 20px 0}
-  .list{padding:6px 12px 48px}
-  .card{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:14px;
-    padding:13px 14px;margin:8px 4px;display:flex;gap:12px;align-items:flex-start;cursor:pointer;box-shadow:0 1px 3px var(--shadow)}
+  .count{color:var(--mut);font-size:12px;padding:10px 16px 0}
+  .list{flex:1;overflow:auto;padding:4px 10px 30px}
+  .card{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:13px;
+    padding:11px 12px;margin:8px 2px;display:flex;gap:10px;align-items:flex-start;cursor:pointer;box-shadow:0 1px 3px var(--shadow)}
   .card.bb{border-color:#2f6b4f;box-shadow:0 0 0 1px #2f6b4f33 inset}
-  .rank{flex:0 0 auto;width:26px;text-align:center;color:var(--mut);font-size:12px;font-weight:600;padding-top:3px}
-  .body{flex:1;min-width:0}
-  .addr{font-weight:620;font-size:15px;padding-right:54px}
-  .loc{color:var(--mut);font-size:12.5px;margin-top:1px}
-  .meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-  .chip{background:var(--chip);border-radius:999px;padding:3px 9px;font-size:11.5px;color:var(--mut)}
+  .card.sel{outline:2px solid var(--acc);outline-offset:-1px}
+  .rank{flex:0 0 auto;width:24px;text-align:center;color:var(--mut);font-size:12px;font-weight:600;padding-top:3px}
+  .cbody{flex:1;min-width:0}
+  .addr{font-weight:620;font-size:14px;padding-right:52px}
+  .loc{color:var(--mut);font-size:12px;margin-top:1px}
+  .meta{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+  .chip{background:var(--chip);border-radius:999px;padding:3px 8px;font-size:11px;color:var(--mut)}
   .chip.price{color:var(--txt);font-weight:600}.chip.gap{color:var(--good)}.chip.drop{color:var(--warn)}.chip.new{color:var(--good)}
-  .score{flex:0 0 auto;text-align:center;width:50px}
-  .score b{display:block;font-size:21px;font-weight:720;line-height:1}.score small{color:var(--mut);font-size:10px}
+  .score{flex:0 0 auto;text-align:center;width:46px}
+  .score b{display:block;font-size:20px;font-weight:720;line-height:1}.score small{color:var(--mut);font-size:10px}
   .g-A{color:#33c27f}.g-B{color:#7ec8ff}.g-C{color:#f5b942}.g-D,.g-F{color:#ef5d5d}
-  .bbtag{display:inline-block;background:#2f6b4f;color:#dffaeb;font-size:10px;font-weight:700;border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:1px}
-  .acts{position:absolute;top:10px;right:10px;display:flex;gap:4px}
-  .acts button{background:var(--panel2);border:1px solid var(--line);border-radius:8px;width:28px;height:28px;cursor:pointer;font-size:13px;color:var(--mut)}
+  .bbtag{display:inline-block;background:#2f6b4f;color:#dffaeb;font-size:9.5px;font-weight:700;border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:1px}
+  .acts{position:absolute;top:9px;right:9px;display:flex;gap:4px}
+  .acts button{background:var(--panel2);border:1px solid var(--line);border-radius:8px;width:26px;height:26px;cursor:pointer;font-size:12px;color:var(--mut)}
   .acts button.fav{color:#f5b942;border-color:#f5b94255}
   .empty{text-align:center;color:var(--mut);padding:40px 20px}
-  /* detail sheet */
-  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;display:none}
+
+  /* ---- legend panel (slides from left) ---- */
+  .legend{position:fixed;top:0;left:0;bottom:0;width:330px;max-width:88vw;z-index:900;
+    background:var(--bg);border-right:1px solid var(--line);box-shadow:8px 0 30px var(--shadow);
+    transform:translateX(-100%);transition:transform .26s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column}
+  .legend.on{transform:translateX(0)}
+  .legend .lbody{flex:1;overflow:auto;padding:6px 16px 30px;font-size:13px}
+  .legend h3{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--mut);margin:18px 0 7px}
+  .lrow{display:flex;align-items:flex-start;gap:9px;margin:7px 0}
+  .dot{flex:0 0 auto;width:14px;height:14px;border-radius:50%;margin-top:2px;border:1.5px solid rgba(255,255,255,.25)}
+  .lkey{flex:0 0 auto;font-weight:600;min-width:26px}
+  .lrow .ltxt{color:var(--mut);font-size:12.5px}
+  .lrow .ltxt b{color:var(--txt);font-weight:600}
+
+  /* ---- detail sheet ---- */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;display:none}
   .overlay.on{display:block}
-  .sheet{position:fixed;left:0;right:0;bottom:0;z-index:1001;background:var(--bg);border-top:1px solid var(--line);
-    border-radius:18px 18px 0 0;padding:8px 18px calc(env(safe-area-inset-bottom) + 22px);max-height:86vh;overflow:auto;
-    transform:translateY(100%);transition:transform .22s ease}
-  .sheet.on{transform:translateY(0)}
+  .sheet{position:fixed;left:50%;transform:translate(-50%,120%);bottom:0;z-index:1001;width:520px;max-width:96vw;
+    background:var(--bg);border:1px solid var(--line);border-bottom:none;
+    border-radius:18px 18px 0 0;padding:8px 18px calc(env(safe-area-inset-bottom) + 22px);max-height:80vh;overflow:auto;
+    transition:transform .24s cubic-bezier(.4,0,.2,1);box-shadow:0 -8px 40px var(--shadow)}
+  .sheet.on{transform:translate(-50%,0)}
   .grab{width:38px;height:4px;background:var(--line);border-radius:3px;margin:6px auto 12px}
   .sheet h2{margin:.2em 0 0;font-size:19px}
   .dgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
@@ -73,38 +117,65 @@
   .blink{display:block;text-align:center;background:var(--acc);color:#fff;text-decoration:none;border-radius:11px;padding:11px;margin-top:8px;font-weight:600}
   .b2{background:var(--panel2);color:var(--txt);border:1px solid var(--line)}
   .leaflet-popup-content{font:13px -apple-system,sans-serif}
+  .leaflet-control-zoom{margin-bottom:26px!important}
   a{color:var(--acc)}
+  @media(max-width:560px){
+    .hud .brand span{display:none}
+    .sheet{border-radius:18px 18px 0 0}
+  }
 </style>
 </head>
 <body>
-<header>
-  <div class="row">
-    <div><h1>Property Scout</h1><div class="sub">Updated Thu Jun 25 · 12:48 PM</div></div>
-    <button class="icbtn" id="theme" title="Toggle theme">◐</button>
-  </div>
-  <div class="stats" id="stats"></div>
-  <div class="controls">
-    <div class="seg" id="seg">
-      <button data-f="all" class="on">All</button>
-      <button data-f="bb">Buy-box</button>
-      <button data-f="new">New</button>
-      <button data-f="drop">Drops</button>
-      <button data-f="fav">★</button>
-    </div>
-    <select id="county"><option value="">All counties</option></select>
-    <select id="beds"><option value="0">Any beds</option><option value="2">2+ bd</option><option value="3">3+ bd</option><option value="4">4+ bd</option></select>
-    <select id="type"><option value="">All types</option></select>
-    <select id="sort">
-      <option value="rank">Sort: Rank</option><option value="score">Score</option>
-      <option value="gap">Below median</option><option value="price">Price ↑</option><option value="dom">Days on mkt</option>
-    </select>
-    <input id="q" placeholder="Search town or address…">
-  </div>
-</header>
-<div id="map"></div>
-<div class="count" id="count"></div>
-<div class="list" id="list"></div>
 
+<div id="map"></div>
+
+<!-- condensed floating dashboard -->
+<div class="hud">
+  <div class="brand"><b>Property Scout</b><span>Thu Jun 25 · 2:42 PM</span></div>
+  <div class="hstats" id="stats"></div>
+</div>
+
+<!-- floating buttons -->
+<div class="fabs">
+  <button class="fab" id="btnList" title="Listings">☰<span class="badge" id="listBadge"></span></button>
+  <button class="fab" id="btnLegend" title="Legend">ⓘ</button>
+  <button class="fab" id="btnFit" title="Recenter on best">◎</button>
+  <button class="fab" id="theme" title="Toggle theme">◐</button>
+</div>
+
+<!-- slide-in list panel -->
+<aside class="panel" id="panel">
+  <div class="phead">
+    <div class="row"><h2>Listings</h2><button class="x" id="closeList">✕</button></div>
+    <div class="controls">
+      <div class="seg" id="seg">
+        <button data-f="all" class="on">All</button>
+        <button data-f="bb">Buy-box</button>
+        <button data-f="new">New</button>
+        <button data-f="drop">Drops</button>
+        <button data-f="fav">★</button>
+      </div>
+      <select id="county"><option value="">All counties</option></select>
+      <select id="beds"><option value="0">Any beds</option><option value="2">2+ bd</option><option value="3">3+ bd</option><option value="4">4+ bd</option></select>
+      <select id="type"><option value="">All types</option></select>
+      <select id="sort">
+        <option value="rank">Sort: Rank</option><option value="score">Score</option>
+        <option value="gap">Below median</option><option value="price">Price ↑</option><option value="dom">Days on mkt</option>
+      </select>
+      <input id="q" placeholder="Search town or address…">
+    </div>
+  </div>
+  <div class="count" id="count"></div>
+  <div class="list" id="list"></div>
+</aside>
+
+<!-- legend panel -->
+<aside class="legend" id="legend">
+  <div class="phead"><div class="row"><h2>Legend &amp; guide</h2><button class="x" id="closeLegend">✕</button></div></div>
+  <div class="lbody" id="legendbody"></div>
+</aside>
+
+<!-- detail sheet -->
 <div class="overlay" id="ov"></div>
 <div class="sheet" id="sheet"><div class="grab"></div><div id="sheetbody"></div></div>
 
@@ -116,21 +187,21 @@ const store=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))??d}catch(e){r
 const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
 let favs=new Set(store("ps_favs",[])), hid=new Set(store("ps_hid",[]));
 let state={f:"all",county:"",beds:0,type:"",sort:"rank",q:""};
+let selId=null;
 const byId={}; DATA.forEach(d=>byId[d.id]=d);
 
 // theme
 const setTheme=t=>{document.documentElement.dataset.theme=t;save("ps_theme",t);
   document.querySelector('meta[name=theme-color]').content=(t==="light"?"#f4f6fa":"#0f1115")};
 setTheme(store("ps_theme","dark"));
-$("#theme").onclick=()=>setTheme(document.documentElement.dataset.theme==="light"?"dark":"light");
 
-// stat header + selects
+// condensed stats + selects
 $("#stats").innerHTML=`
- <div class="stat"><b>${STAT.total}</b><span>listings</span></div>
- <div class="stat"><b style="color:var(--good)">${STAT.bb}</b><span>buy-box</span></div>
- <div class="stat"><b style="color:var(--good)">${STAT.new}</b><span>new</span></div>
- <div class="stat"><b style="color:var(--warn)">${STAT.drop}</b><span>drops</span></div>
- <div class="stat"><b>${STAT.avg}</b><span>avg score</span></div>`;
+ <div class="hstat"><b>${STAT.total}</b><span>list</span></div>
+ <div class="hstat"><b style="color:var(--good)">${STAT.bb}</b><span>buy-box</span></div>
+ <div class="hstat"><b style="color:var(--good)">${STAT.new}</b><span>new</span></div>
+ <div class="hstat"><b style="color:var(--warn)">${STAT.drop}</b><span>drops</span></div>
+ <div class="hstat"><b>${STAT.avg}</b><span>avg</span></div>`;
 COUNTIES.forEach(c=>$("#county").add(new Option(c,c)));
 TYPES.forEach(t=>$("#type").add(new Option(t,t)));
 
@@ -152,8 +223,10 @@ function passes(d){
 function sortKey(d){switch(state.sort){
   case"score":return -(d.s||0);case"gap":return -(d.gap==null?-999:d.gap);
   case"price":return d.p||1e15;case"dom":return -(d.dom||0);default:return d.rank;}}
+// overall quality so the best deals draw on top / frame the map
+function quality(d){return (d.bb?100000:0)+(d.s||0)*100+(d.gap||0);}
 
-const map=L.map("map",{zoomControl:true}).setView([40.88,-74.05],11);
+const map=L.map("map",{zoomControl:true}).setView([40.84,-74.04],12);
 let tiles;
 function setTiles(){if(tiles)map.removeLayer(tiles);
   const dark=document.documentElement.dataset.theme!=="light";
@@ -163,9 +236,20 @@ setTiles();
 let layer=L.layerGroup().addTo(map);
 const color=d=>d.bb?"#33c27f":d.s>=80?"#7ec8ff":d.s>=65?"#f5b942":"#8a93a3";
 
-function render(){
+// frame the map on the BEST options, not the whole spread
+function fitBest(rows){
+  const mapped=rows.filter(d=>d.la!=null);
+  if(!mapped.length)return;
+  const ranked=[...mapped].sort((a,b)=>quality(b)-quality(a));
+  const top=ranked.filter(d=>d.bb||(d.s||0)>=70);
+  const use=(top.length>=3?top:ranked.slice(0,Math.max(8,Math.ceil(ranked.length*0.4))));
+  map.fitBounds(use.map(d=>[d.la,d.lo]),{padding:[60,60],maxZoom:14});
+}
+
+function render(refit){
   const rows=DATA.filter(passes).sort((a,b)=>{const ka=sortKey(a),kb=sortKey(b);return ka<kb?-1:ka>kb?1:0});
   $("#count").textContent=`${rows.length} shown`+(hid.size?` · ${hid.size} dismissed`:"");
+  $("#listBadge").textContent=rows.length;
   $("#list").innerHTML=rows.length?rows.map(d=>{
     const ch=[`<span class="chip price">${fmt(d.p)}</span>`];
     if(d.bd)ch.push(`<span class="chip">${d.bd} bd</span>`);
@@ -174,9 +258,9 @@ function render(){
     if(d.st==="Price Drop")ch.push(`<span class="chip drop">Price drop</span>`);
     if(d.st==="New Today")ch.push(`<span class="chip new">New</span>`);
     if(d.dom!=null)ch.push(`<span class="chip">${Math.round(d.dom)} DOM</span>`);
-    return `<div class="card ${d.bb?'bb':''}" data-id="${d.id}">
+    return `<div class="card ${d.bb?'bb':''} ${d.id===selId?'sel':''}" data-id="${d.id}">
       <div class="rank">#${d.rank}</div>
-      <div class="body">
+      <div class="cbody">
         <div class="addr">${d.a}${d.bb?'<span class="bbtag">BUY-BOX</span>':''}</div>
         <div class="loc">${d.t}${d.c?', '+d.c:''}${d.sty?' · '+d.sty:(d.ty?' · '+d.ty:'')}</div>
         <div class="meta">${ch.join('')}</div>
@@ -189,16 +273,21 @@ function render(){
       </div>
     </div>`;}).join(""):'<div class="empty">No listings match these filters.</div>';
 
-  layer.clearLayers();const pts=[];
-  rows.forEach(d=>{if(d.la==null)return;pts.push([d.la,d.lo]);
-    L.circleMarker([d.la,d.lo],{radius:d.bb?7:5,color:color(d),weight:1.5,fillColor:color(d),fillOpacity:.8})
+  // draw markers worst-first so the best deals sit on top
+  layer.clearLayers();
+  const mapped=rows.filter(d=>d.la!=null).sort((a,b)=>quality(a)-quality(b));
+  mapped.forEach(d=>{
+    const good=d.bb||(d.s||0)>=70;
+    L.circleMarker([d.la,d.lo],{radius:d.bb?8:good?6:4.5,color:color(d),weight:1.5,
+      fillColor:color(d),fillOpacity:good?.9:.45})
      .on("click",()=>openDetail(d.id))
      .bindTooltip(`${d.a} · ${fmt(d.p)} · ${d.s!=null?Math.round(d.s):'—'}`).addTo(layer);});
-  if(pts.length)map.fitBounds(pts,{padding:[30,30],maxZoom:13});
+  if(refit)fitBest(rows);
 }
 
 function openDetail(id){
   const d=byId[id];if(!d)return;
+  selId=id;
   const maps=`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(d.a+", "+d.t+" NJ")}`;
   const cell=(l,v)=>`<div class="d"><span>${l}</span><b>${v}</b></div>`;
   $("#sheetbody").innerHTML=`
@@ -219,27 +308,68 @@ function openDetail(id){
     <a class="blink b2" id="d-fav" href="javascript:void 0">${favs.has(d.id)?'★ Saved — tap to remove':'☆ Save to favorites'}</a>`;
   $("#d-fav").onclick=()=>{toggleFav(d.id);openDetail(id);};
   $("#ov").classList.add("on");requestAnimationFrame(()=>$("#sheet").classList.add("on"));
+  if(d.la!=null)map.panTo([d.la,d.lo],{animate:true});
+  render();
 }
-function closeDetail(){$("#sheet").classList.remove("on");setTimeout(()=>$("#ov").classList.remove("on"),200);}
+function closeDetail(){$("#sheet").classList.remove("on");setTimeout(()=>$("#ov").classList.remove("on"),200);selId=null;render();}
 function toggleFav(id){favs.has(id)?favs.delete(id):favs.add(id);save("ps_favs",[...favs]);render();}
 function dismiss(id){hid.add(id);save("ps_hid",[...hid]);render();}
 
-// events
+// ---- legend ----
+$("#legendbody").innerHTML=`
+  <h3>Map markers</h3>
+  <div class="lrow"><span class="dot" style="background:#33c27f"></span><span class="ltxt"><b>Green</b> — Buy-box match (meets all your criteria). Drawn largest & on top.</span></div>
+  <div class="lrow"><span class="dot" style="background:#7ec8ff"></span><span class="ltxt"><b>Blue</b> — Score 80+ (strong deal).</span></div>
+  <div class="lrow"><span class="dot" style="background:#f5b942"></span><span class="ltxt"><b>Amber</b> — Score 65–79 (decent).</span></div>
+  <div class="lrow"><span class="dot" style="background:#8a93a3;opacity:.55"></span><span class="ltxt"><b>Grey, faded</b> — Below 65. Dimmed so better options stand out.</span></div>
+  <h3>Score & ranking</h3>
+  <div class="lrow"><span class="ltxt"><b>Score (0–100)</b> — Weighted blend of below-median price, neighborhood demand, safety, schools, transit and 20-yr price trend. Higher = better.</span></div>
+  <div class="lrow"><span class="ltxt"><b>Rank #</b> — Position across all listings. Buy-box first, then by score, then by discount to median.</span></div>
+  <div class="lrow"><span class="ltxt"><b>Trend A–F</b> — 20-year price-appreciation grade for the tract. <span class="g-A">A</span> best, <span class="g-F">F</span> worst.</span></div>
+  <h3>Card chips</h3>
+  <div class="lrow"><span class="lkey" style="color:var(--good)">▲</span><span class="ltxt"><b>% below median</b> — Discount vs. the area's median price.</span></div>
+  <div class="lrow"><span class="lkey" style="color:var(--good)">New</span><span class="ltxt">Listed today.</span></div>
+  <div class="lrow"><span class="lkey" style="color:var(--warn)">Drop</span><span class="ltxt">Price was just reduced.</span></div>
+  <div class="lrow"><span class="lkey">DOM</span><span class="ltxt">Days on market.</span></div>
+  <h3>Buttons</h3>
+  <div class="lrow"><span class="lkey">☰</span><span class="ltxt">Open the <b>listings panel</b> (filters + ranked cards). Badge shows how many match.</span></div>
+  <div class="lrow"><span class="lkey">ⓘ</span><span class="ltxt">This legend.</span></div>
+  <div class="lrow"><span class="lkey">◎</span><span class="ltxt"><b>Recenter</b> the map on the best current options.</span></div>
+  <div class="lrow"><span class="lkey">◐</span><span class="ltxt">Toggle light / dark.</span></div>
+  <div class="lrow"><span class="lkey" style="color:#f5b942">★</span><span class="ltxt">Save a favorite (kept on this device).</span></div>
+  <div class="lrow"><span class="lkey">✕</span><span class="ltxt">Dismiss a listing from the list.</span></div>
+  <h3>Filters (in listings panel)</h3>
+  <div class="lrow"><span class="ltxt"><b>All · Buy-box · New · Drops · ★</b> quick filters, plus county, beds, type, sort and search.</span></div>`;
+
+// ---- panel / legend toggles ----
+function openPanel(){$("#panel").classList.add("on");$("#btnList").classList.add("on");}
+function closePanel(){$("#panel").classList.remove("on");$("#btnList").classList.remove("on");}
+function openLegend(){$("#legend").classList.add("on");$("#btnLegend").classList.add("on");}
+function closeLegend(){$("#legend").classList.remove("on");$("#btnLegend").classList.remove("on");}
+$("#btnList").onclick=()=>$("#panel").classList.contains("on")?closePanel():openPanel();
+$("#closeList").onclick=closePanel;
+$("#btnLegend").onclick=()=>$("#legend").classList.contains("on")?closeLegend():openLegend();
+$("#closeLegend").onclick=closeLegend;
+$("#btnFit").onclick=()=>fitBest(DATA.filter(passes));
+$("#theme").onclick=()=>{setTheme(document.documentElement.dataset.theme==="light"?"dark":"light");setTiles();};
+
+// ---- filter events ----
 $("#seg").addEventListener("click",e=>{if(e.target.tagName!=="BUTTON")return;
-  [...$("#seg").children].forEach(b=>b.classList.remove("on"));e.target.classList.add("on");state.f=e.target.dataset.f;render();});
-$("#county").onchange=e=>{state.county=e.target.value;render();};
-$("#type").onchange=e=>{state.type=e.target.value;render();};
-$("#beds").onchange=e=>{state.beds=+e.target.value;render();};
+  [...$("#seg").children].forEach(b=>b.classList.remove("on"));e.target.classList.add("on");state.f=e.target.dataset.f;render(true);});
+$("#county").onchange=e=>{state.county=e.target.value;render(true);};
+$("#type").onchange=e=>{state.type=e.target.value;render(true);};
+$("#beds").onchange=e=>{state.beds=+e.target.value;render(true);};
 $("#sort").onchange=e=>{state.sort=e.target.value;render();};
 $("#q").oninput=e=>{state.q=e.target.value;render();};
-$("#theme").addEventListener("click",setTiles);
 $("#list").addEventListener("click",e=>{
   const fav=e.target.closest("[data-fav]"),hide=e.target.closest("[data-hide]"),card=e.target.closest(".card");
   if(fav){e.stopPropagation();toggleFav(fav.dataset.fav);return;}
   if(hide){e.stopPropagation();dismiss(hide.dataset.hide);return;}
   if(card)openDetail(card.dataset.id);});
 $("#ov").onclick=closeDetail;
-render();
+
+render(false);
+fitBest(DATA);
 
 if("serviceWorker" in navigator && location.protocol.startsWith("http")){
   navigator.serviceWorker.register("sw.js").catch(()=>{});

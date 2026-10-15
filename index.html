@@ -116,6 +116,10 @@
   .d span{display:block;color:var(--mut);font-size:11px}.d b{font-size:15px}
   .blink{display:block;text-align:center;background:var(--acc);color:#fff;text-decoration:none;border-radius:11px;padding:11px;margin-top:8px;font-weight:600}
   .b2{background:var(--panel2);color:var(--txt);border:1px solid var(--line)}
+  .mlsrow{margin-top:5px}
+  .mls{font-size:12px;color:var(--acc);text-decoration:none;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+  a.mls:hover{text-decoration:underline}
+  span.mls{color:var(--mut,#8a93a3)}
   .leaflet-popup-content{font:13px -apple-system,sans-serif}
   .leaflet-control-zoom{margin-bottom:26px!important}
   a{color:var(--acc)}
@@ -131,7 +135,7 @@
 
 <!-- condensed floating dashboard -->
 <div class="hud">
-  <div class="brand"><b>Property Scout</b><span>Thu Oct 15 · 5:10 PM</span></div>
+  <div class="brand"><b>Property Scout</b><span>Thu Oct 15 · 5:12 PM</span></div>
   <div class="hstats" id="stats"></div>
 </div>
 
@@ -269,6 +273,7 @@ function render(refit){
         <div class="addr">${d.a}${d.bb?'<span class="bbtag">BUY-BOX</span>':''}</div>
         <div class="loc">${d.t}${d.c?', '+d.c:''}${d.sty?' · '+d.sty:(d.ty?' · '+d.ty:'')}</div>
         <div class="meta">${ch.join('')}</div>
+        <div class="mlsrow">${mlsLink(d.id)}</div>
       </div>
       <div class="score"><b>${d.s!=null?Math.round(d.s):'—'}</b><small>score</small>
         <div style="margin-top:3px;font-size:12px">Trend ${grade(d.tg)}</div></div>
@@ -290,6 +295,11 @@ function render(refit){
   if(refit)fitBest(rows);
 }
 
+// NJMLS public listing page by MLS # (board-run site; works for any NJMLS listing number)
+const mlsUrl=id=>/^\d{8}$/.test(id)?`https://www.njmls.com/listings/index.cfm?action=dsp.info&mlsnum=${id}`:null;
+function mlsLink(id){const u=mlsUrl(id);
+  return u?`<a class="mls" href="${u}" target="_blank" rel="noopener" onclick="event.stopPropagation()">MLS #${id} ↗</a>`
+          :(/^\d+$/.test(id)?`<span class="mls">MLS #${id}</span>`:'');}
 function openDetail(id){
   const d=byId[id];if(!d)return;
   selId=id;
@@ -307,9 +317,11 @@ function openDetail(id){
       ${cell("Days on market",d.dom!=null?Math.round(d.dom):"—")}
       ${cell("Safety (0-10)",d.sf!=null?d.sf:"—")}
       ${cell("Rank",'#'+d.rank+" of "+DATA.length)}
+      ${cell("MLS #",d.id)}
     </div>
     ${d.tr?`<div class="d" style="margin-bottom:8px"><span>Transit</span><b style="font-weight:500;font-size:13px">🚆 ${d.tr}</b></div>`:''}
-    <a class="blink" href="${maps}" target="_blank" rel="noopener">Open in Google Maps</a>
+    ${mlsUrl(d.id)?`<a class="blink" href="${mlsUrl(d.id)}" target="_blank" rel="noopener">View listing on NJMLS · MLS #${d.id}</a>`:''}
+    <a class="blink ${mlsUrl(d.id)?'b2':''}" href="${maps}" target="_blank" rel="noopener">Open in Google Maps</a>
     <a class="blink b2" id="d-fav" href="javascript:void 0">${favs.has(d.id)?'★ Saved — tap to remove':'☆ Save to favorites'}</a>`;
   $("#d-fav").onclick=()=>{toggleFav(d.id);openDetail(id);};
   $("#ov").classList.add("on");requestAnimationFrame(()=>$("#sheet").classList.add("on"));

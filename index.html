@@ -131,7 +131,7 @@
 
 <!-- condensed floating dashboard -->
 <div class="hud">
-  <div class="brand"><b>Property Scout</b><span>Thu Oct 15 · 5:04 PM</span></div>
+  <div class="brand"><b>Property Scout</b><span>Thu Oct 15 · 5:10 PM</span></div>
   <div class="hstats" id="stats"></div>
 </div>
 
@@ -377,7 +377,7 @@ render(false);
 fitBest(DATA);
 
 if("serviceWorker" in navigator && location.protocol.startsWith("http")){
-  navigator.serviceWorker.register("sw.js").catch(()=>{});
+  navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>r.update()).catch(()=>{});
 }
 </script>
 </body>
